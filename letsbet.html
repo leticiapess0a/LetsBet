@@ -5,136 +5,127 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LetsBet ⚡</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config={theme:{extend:{colors:{brand:{bg:'#0f1923',mid:'#1e2d3d',green:'#00e676',orange:'#ff6d00'}}}}}</script>
   <style>
     body { background:#0f1923; color:white; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
-    input::placeholder { color:#6b7280; }
-    select option { background:#1e2d3d; }
-    * { -webkit-tap-highlight-color: transparent; }
+    input::placeholder, textarea::placeholder { color:#6b7280; }
+    * { -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
   </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-// ════════════════════════════════════════════════════════════
-//  CONFIGURAÇÃO — preenchida pelo admin no painel
-// ════════════════════════════════════════════════════════════
-const CONFIG = {"jogo":"Brasil x Haiti","data":"19/06/2026","hora":"21h30","estadio":"Lincoln Financial Field, Filadélfia","valor":"10","pixChave":"","pixNome":"","whatsapp":"","adminPass":"admin123","ativo":true};
-// ════════════════════════════════════════════════════════════
-
+// ── Estado ────────────────────────────────────────────────
 let page = 'home';
+let CONFIG = null;           // carregado da URL ou nulo
 let nomeAposta = '', p1 = '', p2 = '';
 let logoClicks = 0, logoTimer = null;
+const ADMIN_PASS_KEY = 'letsbet_admin_pass';
+
+// ── Carrega config da URL (#hash) ─────────────────────────
+function loadConfig() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return null;
+  try { return JSON.parse(atob(hash)); } catch(e) { return null; }
+}
 
 // ── Navegação ─────────────────────────────────────────────
 function go(p, data) {
   page = p;
-  if (data) { if(data.nome) nomeAposta=data.nome; if(data.p1!==undefined){p1=data.p1;p2=data.p2;} }
+  if (data) {
+    if (data.nome !== undefined) nomeAposta = data.nome;
+    if (data.p1  !== undefined) { p1 = data.p1; p2 = data.p2; }
+  }
   render();
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 
 function onLogo() {
   logoClicks++;
   clearTimeout(logoTimer);
-  logoTimer = setTimeout(() => logoClicks=0, 2000);
-  if (logoClicks >= 5) { logoClicks=0; go('admin-login'); }
+  logoTimer = setTimeout(() => logoClicks = 0, 2000);
+  if (logoClicks >= 5) { logoClicks = 0; go('admin-login'); }
 }
 
 // ── Componentes ───────────────────────────────────────────
 function logo(big) {
-  const sz = big ? 'w-10 h-10 text-xl gap-3 text-3xl' : 'w-7 h-7 text-base gap-2 text-xl';
   return `<div class="flex items-center ${big?'gap-3':'gap-2'} cursor-pointer select-none" onclick="onLogo()">
-    <div style="background:#ff6d00" class="${big?'w-10 h-10 text-xl':'w-7 h-7 text-base'} flex items-center justify-center rounded-lg">⚡</div>
-    <span class="${big?'text-3xl':'text-xl'} font-black tracking-tight"><span class="text-white">Lets</span><span style="color:#00e676">Bet</span></span>
+    <div style="background:#ff6d00;width:${big?'40px':'28px'};height:${big?'40px':'28px'};font-size:${big?'20px':'14px'}" class="flex items-center justify-center rounded-lg">⚡</div>
+    <span style="font-size:${big?'28px':'20px'}" class="font-black tracking-tight"><span class="text-white">Lets</span><span style="color:#00e676">Bet</span></span>
   </div>`;
 }
 
-function card(content, borderColor='rgba(255,255,255,0.05)') {
-  return `<div class="rounded-2xl p-5 border" style="background:#1e2d3d;border-color:${borderColor}">${content}</div>`;
-}
-
-function inputStyle() {
-  return 'background:#1e2d3d;border-color:rgba(255,255,255,0.1);color:white';
-}
-
-function inputClass() {
-  return 'w-full border rounded-xl px-4 py-3 text-sm outline-none';
-}
+function inputStyle() { return 'width:100%;border:1px solid rgba(255,255,255,0.1);background:#1e2d3d;color:white;border-radius:12px;padding:12px 16px;font-size:14px;outline:none;'; }
 
 // ── Página Inicial ────────────────────────────────────────
 function pageHome() {
-  const semConfig = !CONFIG.pixChave && !CONFIG.whatsapp;
-
-  if (!CONFIG.ativo) return `
-    <div class="min-h-screen flex flex-col items-center justify-center px-4 text-center">
-      <div class="mb-8">${logo(true)}</div>
-      ${card(`<div class="text-4xl mb-3">🔒</div><h2 class="font-bold text-lg mb-2">Bolão Encerrado</h2><p style="color:#9ca3af">As apostas foram encerradas. Obrigado a todos!</p>`)}
+  if (!CONFIG) return `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+      <div style="margin-bottom:32px">${logo(true)}</div>
+      <div style="background:#1e2d3d;border-radius:20px;padding:32px;max-width:380px;border:1px solid rgba(255,255,255,0.05)">
+        <div style="font-size:48px;margin-bottom:12px">⚙️</div>
+        <h2 style="font-weight:800;font-size:18px;margin-bottom:8px">Nenhum bolão configurado</h2>
+        <p style="color:#9ca3af;font-size:14px;margin-bottom:16px">Se você é o organizador, clique no logo <strong style="color:#00e676">⚡ 5 vezes</strong> para acessar o painel.</p>
+        <p style="color:#6b7280;font-size:12px">Os participantes devem usar o link gerado pelo organizador.</p>
+      </div>
     </div>`;
 
-  if (semConfig) return `
-    <div class="min-h-screen flex flex-col items-center justify-center px-4 text-center">
-      <div class="mb-8">${logo(true)}</div>
-      ${card(`
-        <div class="text-4xl mb-3">⚙️</div>
-        <h2 class="font-bold text-lg mb-2">Configure o Bolão</h2>
-        <p class="text-sm mb-4" style="color:#9ca3af">Você é o admin? Clique no logo <strong>5 vezes</strong> para acessar o painel e configurar o bolão.</p>
-        <p class="text-xs" style="color:#6b7280">Depois baixe o HTML configurado e compartilhe com os participantes.</p>
-      `)}
+  if (!CONFIG.ativo) return `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+      <div style="margin-bottom:32px">${logo(true)}</div>
+      <div style="background:#1e2d3d;border-radius:20px;padding:32px;max-width:380px">
+        <div style="font-size:48px;margin-bottom:12px">🔒</div>
+        <h2 style="font-weight:800;font-size:18px;margin-bottom:8px">Bolão Encerrado</h2>
+        <p style="color:#9ca3af;font-size:14px">As apostas foram encerradas. Obrigado a todos!</p>
+      </div>
     </div>`;
 
   const [time1, time2] = CONFIG.jogo.split(' x ');
   return `
-    <div class="min-h-screen px-4 py-8 max-w-lg mx-auto">
-      <div class="mb-8">${logo(true)}</div>
+    <div style="min-height:100vh;padding:32px 16px;max-width:480px;margin:0 auto">
+      <div style="margin-bottom:32px">${logo(true)}</div>
 
-      ${card(`
-        <span class="text-xs font-semibold px-2 py-1 rounded-full" style="color:#00e676;background:rgba(0,230,118,0.1)">🟢 ABERTO</span>
-        <h1 class="text-2xl font-black mt-3 mb-1">${CONFIG.jogo}</h1>
-        <p class="text-sm" style="color:#9ca3af">${CONFIG.data} · ${CONFIG.hora}</p>
-        <p class="text-xs mt-1" style="color:#6b7280">${CONFIG.estadio}</p>
-        <div class="mt-3 font-bold text-xl" style="color:#00e676">R$ ${CONFIG.valor} por palpite</div>
-      `, 'rgba(0,230,118,0.2)')}
+      <div style="background:#1e2d3d;border-radius:20px;padding:20px;border:1px solid rgba(0,230,118,0.2);margin-bottom:24px">
+        <span style="color:#00e676;background:rgba(0,230,118,0.1);font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px">🟢 ABERTO</span>
+        <h1 style="font-size:24px;font-weight:900;margin:12px 0 4px">${CONFIG.jogo}</h1>
+        <p style="color:#9ca3af;font-size:14px">${CONFIG.data} · ${CONFIG.hora}</p>
+        <p style="color:#6b7280;font-size:12px;margin-top:2px">${CONFIG.estadio}</p>
+        <p style="color:#00e676;font-size:20px;font-weight:700;margin-top:12px">R$ ${CONFIG.valor} por palpite</p>
+      </div>
 
-      <h2 class="font-bold text-lg mt-6 mb-4">Seu palpite</h2>
+      <h2 style="font-weight:700;font-size:18px;margin-bottom:16px">Seu palpite</h2>
 
-      ${card(`
-        <p class="text-xs uppercase tracking-widest mb-4" style="color:#9ca3af">Placar final</p>
-        <div class="flex items-center justify-center gap-4">
-          <div class="flex-1 text-center">
-            <p class="text-xs mb-2" style="color:#9ca3af">${time1?.trim()}</p>
+      <div style="background:#1e2d3d;border-radius:20px;padding:20px;border:1px solid rgba(255,255,255,0.05);margin-bottom:16px">
+        <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px">Placar final</p>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="flex:1;text-align:center">
+            <p style="color:#9ca3af;font-size:11px;margin-bottom:8px">${(time1||'').trim()}</p>
             <input id="p1" type="number" min="0" max="99" placeholder="0"
-              class="w-full text-center text-3xl font-black rounded-xl py-3 outline-none border-2"
-              style="background:#0f1923;border-color:rgba(0,230,118,0.3);color:white"
+              style="width:100%;text-align:center;font-size:32px;font-weight:900;background:#0f1923;border:2px solid rgba(0,230,118,0.3);color:white;border-radius:12px;padding:12px 8px;outline:none"
               onfocus="this.style.borderColor='#00e676'" onblur="this.style.borderColor='rgba(0,230,118,0.3)'" />
           </div>
-          <span class="text-3xl font-black pb-1" style="color:#6b7280">x</span>
-          <div class="flex-1 text-center">
-            <p class="text-xs mb-2" style="color:#9ca3af">${time2?.trim()}</p>
+          <span style="font-size:28px;font-weight:900;color:#6b7280;padding-bottom:8px">x</span>
+          <div style="flex:1;text-align:center">
+            <p style="color:#9ca3af;font-size:11px;margin-bottom:8px">${(time2||'').trim()}</p>
             <input id="p2" type="number" min="0" max="99" placeholder="0"
-              class="w-full text-center text-3xl font-black rounded-xl py-3 outline-none border-2"
-              style="background:#0f1923;border-color:rgba(0,230,118,0.3);color:white"
+              style="width:100%;text-align:center;font-size:32px;font-weight:900;background:#0f1923;border:2px solid rgba(0,230,118,0.3);color:white;border-radius:12px;padding:12px 8px;outline:none"
               onfocus="this.style.borderColor='#00e676'" onblur="this.style.borderColor='rgba(0,230,118,0.3)'" />
           </div>
         </div>
-      `)}
-
-      <div class="flex flex-col gap-3 mt-4 mb-2">
-        <input id="nome" placeholder="Seu nome completo *" value="${nomeAposta||''}"
-          class="${inputClass()}" style="${inputStyle()}"
-          onfocus="this.style.borderColor='#00e676'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'" />
       </div>
 
-      <div id="err" class="text-red-400 text-sm mb-3 hidden"></div>
+      <input id="nome" placeholder="Seu nome completo *" value="${nomeAposta}"
+        style="${inputStyle()}margin-bottom:16px"
+        onfocus="this.style.borderColor='#00e676'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'" />
+
+      <div id="err" style="color:#f87171;font-size:14px;margin-bottom:12px;display:none"></div>
 
       <button onclick="confirmarPalpite()"
-        class="w-full font-black py-4 rounded-2xl text-lg mt-2 active:scale-95 transition-transform"
-        style="background:#00e676;color:#0f1923">
+        style="width:100%;background:#00e676;color:#0f1923;font-weight:900;font-size:18px;padding:16px;border-radius:20px;border:none;cursor:pointer">
         Confirmar palpite → R$ ${CONFIG.valor}
       </button>
 
-      <p class="text-center text-xs mt-4" style="color:#6b7280">Após confirmar você verá as instruções de pagamento via PIX</p>
-      <p class="text-center text-xs mt-10" style="color:#374151">LetsBet · Copa do Mundo 2026 · Apenas diversão</p>
+      <p style="text-align:center;font-size:12px;color:#6b7280;margin-top:16px">Após confirmar você verá as instruções de pagamento via PIX</p>
+      <p style="text-align:center;font-size:11px;color:#374151;margin-top:40px">LetsBet · Copa do Mundo 2026 · Apenas diversão</p>
     </div>`;
 }
 
@@ -143,9 +134,9 @@ function confirmarPalpite() {
   const v1 = document.getElementById('p1').value;
   const v2 = document.getElementById('p2').value;
   const err = document.getElementById('err');
-  if (!nome) { err.textContent='Informe seu nome.'; err.classList.remove('hidden'); return; }
-  if (v1==='' || v2==='') { err.textContent='Informe o placar completo.'; err.classList.remove('hidden'); return; }
-  go('pix', { nome, p1: v1, p2: v2 });
+  if (!nome) { err.textContent='Informe seu nome.'; err.style.display='block'; return; }
+  if (v1==='' || v2==='') { err.textContent='Informe o placar completo.'; err.style.display='block'; return; }
+  go('pix', { nome, p1:v1, p2:v2 });
 }
 
 // ── Página PIX ────────────────────────────────────────────
@@ -161,62 +152,56 @@ function pagePix() {
   const waLink = CONFIG.whatsapp ? `https://wa.me/${CONFIG.whatsapp}?text=${msg}` : null;
 
   return `
-    <div class="min-h-screen px-4 py-8 max-w-lg mx-auto">
-      <div class="mb-6 cursor-pointer" onclick="go('home')">${logo()}</div>
+    <div style="min-height:100vh;padding:32px 16px;max-width:480px;margin:0 auto">
+      <div style="margin-bottom:24px;cursor:pointer" onclick="go('home')">${logo()}</div>
 
-      ${card(`
-        <div class="text-center">
-          <div class="text-5xl mb-3">✅</div>
-          <h2 class="text-xl font-black mb-1">Palpite anotado!</h2>
-          <p class="text-sm" style="color:#9ca3af">Agora faça o PIX para confirmar sua vaga</p>
-        </div>
-      `, 'rgba(0,230,118,0.3)')}
+      <div style="background:#1e2d3d;border-radius:20px;padding:20px;text-align:center;border:1px solid rgba(0,230,118,0.3);margin-bottom:16px">
+        <div style="font-size:48px;margin-bottom:8px">✅</div>
+        <h2 style="font-size:20px;font-weight:900;margin-bottom:4px">Palpite anotado!</h2>
+        <p style="color:#9ca3af;font-size:14px">Agora faça o PIX para confirmar sua vaga</p>
+      </div>
 
-      <div class="mt-4">${card(`
-        <p class="text-xs uppercase tracking-widest mb-3" style="color:#9ca3af">Resumo do palpite</p>
-        <div class="flex items-center justify-between">
-          <span class="font-bold">${CONFIG.jogo}</span>
-          <span class="font-black text-2xl" style="color:#00e676">${p1} x ${p2}</span>
+      <div style="background:#1e2d3d;border-radius:20px;padding:16px;border:1px solid rgba(255,255,255,0.05);margin-bottom:16px">
+        <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">Seu palpite</p>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700">${CONFIG.jogo}</span>
+          <span style="font-weight:900;font-size:24px;color:#00e676">${p1} x ${p2}</span>
         </div>
-        <p class="text-xs mt-1" style="color:#6b7280">por ${nomeAposta}</p>
-      `)}</div>
+        <p style="color:#6b7280;font-size:12px;margin-top:4px">por ${nomeAposta}</p>
+      </div>
 
-      <div class="mt-4 rounded-2xl p-5 border" style="background:rgba(234,179,8,0.08);border-color:rgba(234,179,8,0.3)">
-        <h3 class="font-black text-lg mb-4" style="color:#facc15">💰 Pague via PIX</h3>
-        <div class="flex flex-col gap-4">
-          <div>
-            <p class="text-xs mb-1" style="color:#9ca3af">Valor</p>
-            <p class="text-3xl font-black text-white">R$ ${CONFIG.valor}</p>
-          </div>
-          ${CONFIG.pixChave ? `
-          <div>
-            <p class="text-xs mb-1" style="color:#9ca3af">Chave PIX — toque para copiar</p>
-            <button id="pix-btn" onclick="copiarPix(this)"
-              class="w-full text-left rounded-xl px-4 py-3 font-mono text-sm flex items-center justify-between border active:scale-95 transition-transform"
-              style="background:#0f1923;border-color:rgba(234,179,8,0.4);color:#fde047">
-              <span>${CONFIG.pixChave}</span>
-              <span id="pix-copy" class="text-xs ml-2 shrink-0" style="color:#9ca3af">📋 copiar</span>
-            </button>
-          </div>
-          <div>
-            <p class="text-xs mb-1" style="color:#9ca3af">Destinatário</p>
-            <p class="font-bold text-white">${CONFIG.pixNome}</p>
-          </div>` : `<p style="color:#fef08a">O organizador vai te enviar a chave PIX pelo WhatsApp.</p>`}
+      <div style="background:rgba(234,179,8,0.08);border-radius:20px;padding:20px;border:1px solid rgba(234,179,8,0.3);margin-bottom:16px">
+        <h3 style="color:#facc15;font-weight:900;font-size:18px;margin-bottom:16px">💰 Pague via PIX</h3>
+        <div style="margin-bottom:12px">
+          <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Valor</p>
+          <p style="font-size:32px;font-weight:900">R$ ${CONFIG.valor}</p>
         </div>
-        <div class="mt-4 rounded-xl p-3 text-xs" style="background:rgba(234,179,8,0.1);color:#fef08a">
+        ${CONFIG.pixChave ? `
+        <div style="margin-bottom:12px">
+          <p style="color:#9ca3af;font-size:12px;margin-bottom:6px">Chave PIX — toque para copiar</p>
+          <button onclick="copiarPix(this)"
+            style="width:100%;text-align:left;background:#0f1923;border:1px solid rgba(234,179,8,0.4);border-radius:12px;padding:12px 16px;font-family:monospace;font-size:14px;color:#fde047;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+            <span>${CONFIG.pixChave}</span>
+            <span id="pix-copy" style="color:#9ca3af;font-size:12px;margin-left:8px;white-space:nowrap">📋 copiar</span>
+          </button>
+        </div>
+        <div>
+          <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Destinatário</p>
+          <p style="font-weight:700">${CONFIG.pixNome}</p>
+        </div>` : `<p style="color:#fef08a">O organizador vai te enviar a chave PIX em breve.</p>`}
+        <div style="background:rgba(234,179,8,0.1);border-radius:12px;padding:12px;margin-top:16px;font-size:12px;color:#fef08a">
           ⚠️ Coloque <strong>${nomeAposta}</strong> na descrição do PIX para identificarmos seu pagamento.
         </div>
       </div>
 
       ${waLink ? `
       <a href="${waLink}" target="_blank"
-        class="mt-4 flex items-center justify-center gap-2 w-full font-black py-4 rounded-2xl text-lg active:scale-95 transition-transform"
-        style="background:#25D366;color:white">
-        <span>📱</span> Enviar palpite pelo WhatsApp
+        style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#25D366;color:white;font-weight:900;font-size:18px;padding:16px;border-radius:20px;text-decoration:none;margin-bottom:12px">
+        📱 Enviar palpite pelo WhatsApp
       </a>
-      <p class="text-center text-xs mt-2" style="color:#6b7280">Isso envia seu palpite diretamente para o organizador</p>` : ''}
+      <p style="text-align:center;font-size:12px;color:#6b7280;margin-bottom:16px">Isso envia seu palpite para o organizador confirmar</p>` : ''}
 
-      <div onclick="go('home')" class="block text-center text-sm mt-6 cursor-pointer underline" style="color:#00e676">
+      <div onclick="go('home')" style="text-align:center;color:#00e676;font-size:14px;cursor:pointer;text-decoration:underline">
         ← Fazer outro palpite
       </div>
     </div>`;
@@ -224,185 +209,208 @@ function pagePix() {
 
 function copiarPix(btn) {
   navigator.clipboard?.writeText(CONFIG.pixChave).then(() => {
-    const span = btn.querySelector('#pix-copy');
-    if (span) { span.textContent='✅ copiado!'; setTimeout(()=>{ if(span) span.textContent='📋 copiar'; },2000); }
+    const span = document.getElementById('pix-copy');
+    if (span) { span.textContent='✅ copiado!'; setTimeout(()=>{ if(document.getElementById('pix-copy')) document.getElementById('pix-copy').textContent='📋 copiar'; },2000); }
   });
 }
 
 // ── Admin Login ───────────────────────────────────────────
 function pageAdminLogin() {
   return `
-    <div class="min-h-screen flex flex-col items-center justify-center px-4">
-      <div class="mb-8">${logo(true)}</div>
-      <div class="rounded-2xl p-6 w-full max-w-sm border" style="background:#1e2d3d;border-color:rgba(255,255,255,0.05)">
-        <h2 class="font-bold text-lg mb-1">Área do Admin</h2>
-        <p class="text-xs mb-4" style="color:#9ca3af">Senha padrão: <code style="color:#00e676">admin123</code></p>
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+      <div style="margin-bottom:32px">${logo(true)}</div>
+      <div style="background:#1e2d3d;border-radius:20px;padding:24px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,0.05)">
+        <h2 style="font-weight:700;font-size:18px;margin-bottom:4px">Área do Admin</h2>
+        <p style="color:#9ca3af;font-size:12px;margin-bottom:16px">Senha padrão: <code style="color:#00e676">admin123</code></p>
         <input id="adm-pass" type="password" placeholder="Senha"
           onkeydown="if(event.key==='Enter')loginAdmin()"
-          class="${inputClass()} mb-3" style="${inputStyle()}" />
-        <div id="adm-err" class="text-red-400 text-sm mb-3 hidden">Senha incorreta.</div>
-        <button onclick="loginAdmin()" class="w-full font-black py-3 rounded-xl" style="background:#00e676;color:#0f1923">Entrar</button>
-        <div onclick="go('home')" class="text-center text-xs mt-4 cursor-pointer underline" style="color:#6b7280">← Voltar ao bolão</div>
+          style="${inputStyle()}margin-bottom:12px" />
+        <div id="adm-err" style="color:#f87171;font-size:14px;margin-bottom:12px;display:none">Senha incorreta.</div>
+        <button onclick="loginAdmin()" style="width:100%;background:#00e676;color:#0f1923;font-weight:900;padding:12px;border-radius:12px;border:none;cursor:pointer;font-size:16px">Entrar</button>
+        <div onclick="go('home')" style="text-align:center;color:#6b7280;font-size:12px;margin-top:16px;cursor:pointer;text-decoration:underline">← Voltar</div>
       </div>
     </div>`;
 }
 
 function loginAdmin() {
   const s = document.getElementById('adm-pass').value;
-  if (s === CONFIG.adminPass) go('admin');
-  else document.getElementById('adm-err').classList.remove('hidden');
+  const stored = localStorage.getItem(ADMIN_PASS_KEY) || 'admin123';
+  if (s === stored) go('admin');
+  else document.getElementById('adm-err').style.display='block';
 }
 
 // ── Admin Painel ──────────────────────────────────────────
 function pageAdmin() {
+  const cfg = CONFIG || {};
   return `
-    <div class="min-h-screen px-4 py-6 max-w-lg mx-auto">
-      <div class="flex items-center justify-between mb-6">
+    <div style="min-height:100vh;padding:24px 16px;max-width:480px;margin:0 auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
         ${logo()}
-        <button onclick="go('home')" class="text-xs underline" style="color:#9ca3af">Sair</button>
+        <button onclick="go('home')" style="color:#9ca3af;font-size:12px;background:none;border:none;cursor:pointer;text-decoration:underline">Sair</button>
       </div>
 
-      <h2 class="font-bold text-xl mb-1">⚙️ Configurar Bolão</h2>
-      <p class="text-xs mb-5" style="color:#9ca3af">Preencha os dados, clique em <strong style="color:#00e676">Salvar e baixar</strong> e compartilhe o arquivo baixado.</p>
+      <h2 style="font-weight:800;font-size:20px;margin-bottom:4px">⚙️ Configurar Bolão</h2>
+      <p style="color:#9ca3af;font-size:13px;margin-bottom:20px">Preencha os dados e clique em <strong style="color:#00e676">Gerar link do bolão</strong>. O link gerado é o que você compartilha!</p>
 
-      <div class="flex flex-col gap-3 mb-2">
-
-        <div class="rounded-2xl p-4 border" style="background:#1e2d3d;border-color:rgba(0,230,118,0.2)">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#00e676">⚽ Jogo</p>
-          <div class="flex flex-col gap-2">
-            <div>
-              <p class="text-xs mb-1" style="color:#9ca3af">Nome do jogo (ex: Brasil x Alemanha)</p>
-              <input id="cfg-jogo" value="${CONFIG.jogo}" class="${inputClass()}" style="${inputStyle()}" />
-            </div>
-            <div class="flex gap-2">
-              <div class="flex-1">
-                <p class="text-xs mb-1" style="color:#9ca3af">Data</p>
-                <input id="cfg-data" value="${CONFIG.data}" class="${inputClass()}" style="${inputStyle()}" />
-              </div>
-              <div class="flex-1">
-                <p class="text-xs mb-1" style="color:#9ca3af">Hora</p>
-                <input id="cfg-hora" value="${CONFIG.hora}" class="${inputClass()}" style="${inputStyle()}" />
-              </div>
-            </div>
-            <div>
-              <p class="text-xs mb-1" style="color:#9ca3af">Estádio</p>
-              <input id="cfg-estadio" value="${CONFIG.estadio}" class="${inputClass()}" style="${inputStyle()}" />
-            </div>
-            <div>
-              <p class="text-xs mb-1" style="color:#9ca3af">Valor da aposta (R$)</p>
-              <input id="cfg-valor" type="number" value="${CONFIG.valor}" class="${inputClass()}" style="${inputStyle()}" />
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-2xl p-4 border" style="background:#1e2d3d;border-color:rgba(234,179,8,0.2)">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#facc15">💰 PIX</p>
-          <div class="flex flex-col gap-2">
-            <div>
-              <p class="text-xs mb-1" style="color:#9ca3af">Sua chave PIX (CPF, e-mail, celular, etc.)</p>
-              <input id="cfg-pix-chave" placeholder="Ex: 011.222.333-44 ou email@email.com" value="${CONFIG.pixChave}" class="${inputClass()}" style="${inputStyle()}" />
-            </div>
-            <div>
-              <p class="text-xs mb-1" style="color:#9ca3af">Seu nome no banco</p>
-              <input id="cfg-pix-nome" placeholder="Ex: Leticia Pessoa" value="${CONFIG.pixNome}" class="${inputClass()}" style="${inputStyle()}" />
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-2xl p-4 border" style="background:#1e2d3d;border-color:rgba(37,211,102,0.2)">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#25D366">📱 WhatsApp (para receber os palpites)</p>
+      <!-- Jogo -->
+      <div style="background:#1e2d3d;border-radius:16px;padding:16px;border:1px solid rgba(0,230,118,0.2);margin-bottom:12px">
+        <p style="color:#00e676;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">⚽ Jogo</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
           <div>
-            <p class="text-xs mb-1" style="color:#9ca3af">Seu número com DDI e DDD (só números)</p>
-            <input id="cfg-whatsapp" placeholder="Ex: 5511999999999" value="${CONFIG.whatsapp}" class="${inputClass()}" style="${inputStyle()}" />
-            <p class="text-xs mt-1" style="color:#6b7280">55 = Brasil · 11 = DDD · 9 dígitos</p>
+            <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Nome do jogo</p>
+            <input id="cfg-jogo" value="${cfg.jogo||'Brasil x Haiti'}" style="${inputStyle()}" />
           </div>
-        </div>
-
-        <div class="rounded-2xl p-4 border" style="background:#1e2d3d;border-color:rgba(255,255,255,0.05)">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#9ca3af">🔐 Segurança</p>
-          <div class="flex flex-col gap-2">
-            <div>
-              <p class="text-xs mb-1" style="color:#9ca3af">Senha admin (atual: ${CONFIG.adminPass})</p>
-              <input id="cfg-pass" type="password" placeholder="Deixe em branco para manter a mesma" class="${inputClass()}" style="${inputStyle()}" />
+          <div style="display:flex;gap:10px">
+            <div style="flex:1">
+              <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Data</p>
+              <input id="cfg-data" value="${cfg.data||'19/06/2026'}" style="${inputStyle()}" />
             </div>
-            <label class="flex items-center gap-3 cursor-pointer select-none">
-              <input id="cfg-ativo" type="checkbox" ${CONFIG.ativo?'checked':''} style="width:18px;height:18px;accent-color:#00e676;cursor:pointer" />
-              <span class="text-sm">Bolão aberto para apostas</span>
-            </label>
+            <div style="flex:1">
+              <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Hora</p>
+              <input id="cfg-hora" value="${cfg.hora||'21h30'}" style="${inputStyle()}" />
+            </div>
+          </div>
+          <div>
+            <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Estádio</p>
+            <input id="cfg-estadio" value="${cfg.estadio||''}" style="${inputStyle()}" />
+          </div>
+          <div>
+            <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Valor da aposta (R$)</p>
+            <input id="cfg-valor" type="number" value="${cfg.valor||'10'}" style="${inputStyle()}" />
           </div>
         </div>
-
       </div>
 
-      <div id="cfg-msg" class="text-sm my-3 p-3 rounded-xl hidden"></div>
+      <!-- PIX -->
+      <div style="background:#1e2d3d;border-radius:16px;padding:16px;border:1px solid rgba(234,179,8,0.2);margin-bottom:12px">
+        <p style="color:#facc15;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">💰 PIX</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Sua chave PIX</p>
+            <input id="cfg-pix-chave" placeholder="CPF, e-mail, celular..." value="${cfg.pixChave||''}" style="${inputStyle()}" />
+          </div>
+          <div>
+            <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Seu nome no banco</p>
+            <input id="cfg-pix-nome" placeholder="Ex: Leticia Pessoa" value="${cfg.pixNome||''}" style="${inputStyle()}" />
+          </div>
+        </div>
+      </div>
 
-      <button onclick="baixarHTML()"
-        class="w-full font-black py-4 rounded-2xl text-lg mt-2 active:scale-95 transition-transform"
-        style="background:#00e676;color:#0f1923">
-        💾 Salvar e baixar HTML
+      <!-- WhatsApp -->
+      <div style="background:#1e2d3d;border-radius:16px;padding:16px;border:1px solid rgba(37,211,102,0.2);margin-bottom:12px">
+        <p style="color:#25D366;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">📱 WhatsApp para receber palpites</p>
+        <div>
+          <p style="color:#9ca3af;font-size:12px;margin-bottom:4px">Seu número (só números, com DDI e DDD)</p>
+          <input id="cfg-whatsapp" placeholder="Ex: 5511999999999" value="${cfg.whatsapp||''}" style="${inputStyle()}" />
+          <p style="color:#6b7280;font-size:11px;margin-top:4px">55 = Brasil · depois o DDD · depois o número</p>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div style="background:#1e2d3d;border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
+          <input id="cfg-ativo" type="checkbox" ${(cfg.ativo!==false)?'checked':''} style="width:20px;height:20px;accent-color:#00e676;cursor:pointer" />
+          <span style="font-size:14px">Bolão aberto para apostas</span>
+        </label>
+      </div>
+
+      <div id="cfg-msg" style="display:none;border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px"></div>
+
+      <button onclick="gerarLink()"
+        style="width:100%;background:#00e676;color:#0f1923;font-weight:900;font-size:18px;padding:16px;border-radius:20px;border:none;cursor:pointer">
+        🔗 Gerar link do bolão
       </button>
 
-      <div class="mt-4 rounded-xl p-4 text-xs" style="background:#1e2d3d;color:#9ca3af">
-        <strong class="text-white">Como funciona:</strong><br/>
-        1. Preencha os dados acima<br/>
-        2. Clique em "Salvar e baixar HTML"<br/>
-        3. Um arquivo <code style="color:#00e676">letsbet.html</code> será baixado<br/>
-        4. Compartilhe esse arquivo pelo WhatsApp, e-mail, etc.<br/>
-        5. Os participantes abrem o arquivo e enviam o palpite para você
+      <!-- Link gerado -->
+      <div id="link-box" style="display:none;margin-top:16px;background:#1e2d3d;border-radius:16px;padding:16px;border:1px solid rgba(0,230,118,0.3)">
+        <p style="color:#00e676;font-weight:700;margin-bottom:8px">✅ Link gerado! Compartilhe com os participantes:</p>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <input id="link-gerado" readonly
+            style="flex:1;background:#0f1923;border:1px solid rgba(255,255,255,0.1);color:#9ca3af;border-radius:10px;padding:10px 12px;font-size:12px;outline:none" />
+          <button onclick="copiarLink()"
+            style="background:#00e676;color:#0f1923;font-weight:700;padding:10px 16px;border-radius:10px;border:none;cursor:pointer;white-space:nowrap">
+            📋 Copiar
+          </button>
+        </div>
+        <div id="link-copy-msg" style="color:#00e676;font-size:12px;margin-top:8px;display:none">✅ Link copiado! Agora é só mandar no grupo.</div>
+        <p style="color:#6b7280;font-size:11px;margin-top:12px">💡 Envie esse link pelo WhatsApp, grupo, e-mail, onde quiser. Quem abrir o link verá o bolão pronto para apostar.</p>
       </div>
+
+      <!-- Alterar senha -->
+      <div style="background:#1e2d3d;border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.05);margin-top:20px">
+        <p style="color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">🔐 Alterar senha admin</p>
+        <input id="cfg-pass" type="password" placeholder="Nova senha (deixe em branco para manter)" style="${inputStyle()}margin-bottom:8px" />
+        <button onclick="salvarSenha()"
+          style="width:100%;background:#1e2d3d;color:#9ca3af;border:1px solid rgba(255,255,255,0.1);padding:10px;border-radius:10px;font-size:13px;cursor:pointer">
+          Salvar senha
+        </button>
+        <div id="senha-msg" style="display:none;font-size:12px;margin-top:8px"></div>
+      </div>
+
     </div>`;
 }
 
-function baixarHTML() {
-  const jogo = document.getElementById('cfg-jogo').value.trim();
-  const data = document.getElementById('cfg-data').value.trim();
-  const hora = document.getElementById('cfg-hora').value.trim();
-  const estadio = document.getElementById('cfg-estadio').value.trim();
-  const valor = document.getElementById('cfg-valor').value.trim();
+function gerarLink() {
+  const jogo     = document.getElementById('cfg-jogo').value.trim();
+  const data     = document.getElementById('cfg-data').value.trim();
+  const hora     = document.getElementById('cfg-hora').value.trim();
+  const estadio  = document.getElementById('cfg-estadio').value.trim();
+  const valor    = document.getElementById('cfg-valor').value.trim();
   const pixChave = document.getElementById('cfg-pix-chave').value.trim();
-  const pixNome = document.getElementById('cfg-pix-nome').value.trim();
+  const pixNome  = document.getElementById('cfg-pix-nome').value.trim();
   const whatsapp = document.getElementById('cfg-whatsapp').value.replace(/\D/g,'');
-  const passNova = document.getElementById('cfg-pass').value.trim();
-  const ativo = document.getElementById('cfg-ativo').checked;
-  const msgEl = document.getElementById('cfg-msg');
+  const ativo    = document.getElementById('cfg-ativo').checked;
+  const msgEl    = document.getElementById('cfg-msg');
 
-  if (!jogo) { showMsg(msgEl, '❌ Informe o nome do jogo.', '#f87171'); return; }
-  if (!valor) { showMsg(msgEl, '❌ Informe o valor da aposta.', '#f87171'); return; }
+  if (!jogo)     { showMsg(msgEl,'❌ Informe o nome do jogo.','#f87171','rgba(248,113,113,0.1)'); return; }
+  if (!pixChave) { showMsg(msgEl,'❌ Informe a chave PIX.','#f87171','rgba(248,113,113,0.1)'); return; }
+  if (!pixNome)  { showMsg(msgEl,'❌ Informe o nome do titular PIX.','#f87171','rgba(248,113,113,0.1)'); return; }
 
-  const nova = { jogo, data, hora, estadio, valor, pixChave, pixNome, whatsapp, adminPass: passNova || CONFIG.adminPass, ativo };
+  const cfg = { jogo, data, hora, estadio, valor, pixChave, pixNome, whatsapp, ativo };
+  const hash = btoa(JSON.stringify(cfg));
+  const base = window.location.origin + window.location.pathname;
+  const link = base + '#' + hash;
 
-  const novoConfigStr = 'const CONFIG = ' + JSON.stringify(nova) + ';';
-  const html = document.documentElement.outerHTML;
-  const novoHtml = html.replace(/const CONFIG = \{[^;]+\};/, novoConfigStr);
-
-  const blob = new Blob([novoHtml], { type: 'text/html;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'letsbet.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-
-  showMsg(msgEl, '✅ Arquivo baixado! Compartilhe o arquivo letsbet.html com os participantes.', '#00e676');
+  document.getElementById('link-gerado').value = link;
+  document.getElementById('link-box').style.display = 'block';
+  document.getElementById('link-copy-msg').style.display = 'none';
+  msgEl.style.display = 'none';
+  document.getElementById('link-box').scrollIntoView({ behavior:'smooth' });
 }
 
-function showMsg(el, txt, color) {
+function copiarLink() {
+  const link = document.getElementById('link-gerado').value;
+  navigator.clipboard?.writeText(link).then(() => {
+    document.getElementById('link-copy-msg').style.display = 'block';
+  });
+}
+
+function salvarSenha() {
+  const nova = document.getElementById('cfg-pass').value.trim();
+  const msgEl = document.getElementById('senha-msg');
+  if (!nova) { showMsg(msgEl,'Nenhuma senha digitada.','#f87171','transparent'); return; }
+  if (nova.length < 4) { showMsg(msgEl,'A senha deve ter ao menos 4 caracteres.','#f87171','transparent'); return; }
+  localStorage.setItem(ADMIN_PASS_KEY, nova);
+  showMsg(msgEl,'✅ Senha alterada!','#00e676','transparent');
+}
+
+function showMsg(el, txt, color, bg) {
   el.textContent = txt;
   el.style.color = color;
-  el.style.background = color === '#00e676' ? 'rgba(0,230,118,0.1)' : 'rgba(248,113,113,0.1)';
-  el.classList.remove('hidden');
+  el.style.background = bg;
+  el.style.display = 'block';
 }
 
 // ── Render ────────────────────────────────────────────────
 function render() {
   const app = document.getElementById('app');
-  if (page==='home') app.innerHTML = pageHome();
-  else if (page==='pix') app.innerHTML = pagePix();
+  if      (page==='home')        app.innerHTML = pageHome();
+  else if (page==='pix')         app.innerHTML = pagePix();
   else if (page==='admin-login') app.innerHTML = pageAdminLogin();
-  else if (page==='admin') app.innerHTML = pageAdmin();
+  else if (page==='admin')       app.innerHTML = pageAdmin();
 }
 
+CONFIG = loadConfig();
 render();
 </script>
 </body>
